@@ -352,6 +352,8 @@ get_token :: proc(l: ^Lexer) -> (res: Token, err: Error) {
 	case 'A' ..= 'Z', 'a' ..= 'z', '_':
 		res.kind = .IDENT
 		skip_alphanum(l)
+	case '#':
+		res.kind = .HASH
 	case '"':
 		lexeme_start := l.offset
 		ok := scan_string(l)
@@ -408,6 +410,13 @@ get_token :: proc(l: ^Lexer) -> (res: Token, err: Error) {
 		case '=':
 			next_rune(l)
 			res.kind = .COLON_ASSIGN
+		}
+	case '=':
+		res.kind = .ASSIGN
+		switch l.ch {
+		case '>':
+			next_rune(l)
+			res.kind = .METHOD_ARROW
 		}
 	case '(':
 		res.kind = .LPAREN
@@ -485,17 +494,18 @@ get_token :: proc(l: ^Lexer) -> (res: Token, err: Error) {
 			if '0' <= l.ch && l.ch <= '9' {
 				skip_decimal_digits(l)
 			} else {
-				// e без цифр — ошибка, но пока просто оставим как есть
-				// (можно потом выдать .Invalid_Number)
+				err.msg = "Invalid Number"
+				err.type = .Invalid_Number
+				return
 			}
 		}
 
 		// 5. Суффиксы: f32, f64, u, i32 и т.д.
-		if l.ch == 'f' || l.ch == 'F' || l.ch == 'd' || l.ch == 'D' {
-			res.kind = .FLOAT_LIT
-			next_rune(l)
-			// можно дальше парсить f32/f64, если нужно
-		}
+		// if l.ch == 'f' || l.ch == 'F' || l.ch == 'd' || l.ch == 'D' {
+		// 	res.kind = .FLOAT_LIT
+		// 	next_rune(l)
+		// 	// можно дальше парсить f32/f64, если нужно
+		// }
 
 	case '/':
 		// Проверяем, не комментарий ли это
@@ -541,6 +551,8 @@ get_token :: proc(l: ^Lexer) -> (res: Token, err: Error) {
 		res.kind = .ENUM
 	case "union":
 		res.kind = .UNION
+	case "map":
+		res.kind = .MAP
 
 	case "void":
 		res.kind = .VOID
@@ -567,8 +579,8 @@ get_token :: proc(l: ^Lexer) -> (res: Token, err: Error) {
 	case "u128":
 		res.kind = .U128
 
-	case "float":
-		res.kind = .FLOAT
+	// case "float":
+	// 	res.kind = .FLOAT
 	case "f32":
 		res.kind = .F32
 	case "f64":
@@ -584,6 +596,34 @@ get_token :: proc(l: ^Lexer) -> (res: Token, err: Error) {
 		res.kind = .RUNE
 	case "byte":
 		res.kind = .BYTE
+
+	case "if":
+		res.kind = .IF
+	case "do":
+		res.kind = .DO
+	case "else":
+		res.kind = .ELSE
+	case "for":
+		res.kind = .FOR
+	case "in":
+		res.kind = .IN
+	case "continue":
+		res.kind = .CONTINUE
+	case "break":
+		res.kind = .BREAK
+	case "switch":
+		res.kind = .SWITCH
+	case "case":
+		res.kind = .CASE
+	case "fallthrow":
+		res.kind = .FALLTHROW
+	case "module":
+		res.kind = .MODULE
+	case "import":
+		res.kind = .IMPORT
+	case "distinct":
+		res.kind = .DISTINCT
+	
 
 	}
 	return
