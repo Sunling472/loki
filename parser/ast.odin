@@ -8,9 +8,7 @@ Package :: struct {
 	ast:       [dynamic]Node,
 }
 
-Node :: union {
-	
-}
+Node :: union {}
 
 DeclKind :: enum {
 	Module,
@@ -28,29 +26,29 @@ Decl :: struct {
 }
 
 DeclModule :: struct {
-	ident: string
+	ident: string,
 }
 
 DeclImport :: struct {
 	ident: Maybe(string),
-	path: string
+	path:  string,
 }
 
 DeclVar :: struct {
-	ident: string,
-	type: Node,
-	literal: Literal
+	ident:   string,
+	type:    Node,
+	literal: Literal,
 }
 
 DeclAlias :: struct {
-	ident: string,
-	type: Node,
-	literal: Literal
+	ident:   string,
+	type:    Node,
+	literal: Literal,
 }
 
 DeclInterface :: struct {
-	ident: string,
-	methods: []TypeProc
+	ident:   string,
+	methods: []TypeProc,
 }
 
 LiteralKind :: union {
@@ -61,11 +59,11 @@ LiteralKind :: union {
 	StructLit,
 	EnumLit,
 	UnionLit,
-	ProcLit
+	ProcLit,
 }
 
 Literal :: struct {
-	kind:  LiteralKind,
+	kind: LiteralKind,
 }
 
 IntLit :: int
@@ -74,46 +72,46 @@ StringLit :: string
 BoolLit :: bool
 
 StructLit :: struct {
-	fields: []StructField
+	fields: []StructField,
 }
 
 EnumLit :: struct {
-	fields: []EnumField
+	fields: []EnumField,
 }
 
 UnionLit :: struct {
-	tags: []UnionTag
+	tags: []UnionTag,
 }
 
 ProcLit :: struct {
 	params: []ProcParam,
 	ret_ty: Node,
-	body: []Node
+	body:   []Node,
 }
 
 StructField :: struct {
 	ident: string,
-	type: Type,
+	type:  Type,
 }
 
 EnumField :: struct {
 	ident: string,
-	value: int
+	value: int,
 }
 
 UnionTag :: struct {
 	ident: string,
-	value: Literal
+	value: Literal,
 }
 
 ProcParam :: struct {
-	ident: Maybe(string),
-	type: Node,
-	literal: Literal
+	ident:   Maybe(string),
+	type:    Node,
+	literal: Literal,
 }
 
 Type :: struct {
-	kind: TypeKind
+	kind: TypeKind,
 }
 
 TypeKind :: union {
@@ -122,6 +120,9 @@ TypeKind :: union {
 	TypeUnion,
 	StructType,
 	TypeProc,
+	ArrayType,
+	SliceType,
+	MapType,
 }
 
 TypeBasicKind :: enum {
@@ -172,9 +173,23 @@ TypeBasic :: struct {
 	default: DefaultValue,
 }
 
+ArrayType :: struct {
+	size: Literal,
+	type: ^Type,
+}
+
+SliceType :: struct {
+	type: ^Type,
+}
+
+MapType :: struct {
+	key:   ^Type,
+	value: ^Type,
+}
+
 StructType :: struct {
 	gen_params: []Node,
-	fields: []StructField
+	fields:     []StructField,
 }
 
 EnumType :: struct {
@@ -182,14 +197,15 @@ EnumType :: struct {
 }
 
 TypeUnion :: struct {
-	ident: Maybe(string),
+	ident:      Maybe(string),
 	gen_params: []Node,
-	tags: []Node,
+	tags:       []Node,
 }
 
 TypeProc :: struct {
-	ident: Maybe(string),
+	ident:      Maybe(string),
 	gen_params: []Node,
-	params: []ProcParam,
-	ret_ty: Node,
+	params:     []ProcParam,
+	ret_ty:     Node,
 }
+

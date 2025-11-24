@@ -432,48 +432,47 @@ get_token :: proc(l: ^Lexer) -> (res: Token, err: Error) {
 	case ',':
 		res.kind = .COMMA
 	case '0' ..= '9':
-		lexeme_start := l.offset
+		lexeme_start := l.offset - l.w // ВОТ ГЛАВНОЕ ИСПРАВЛЕНИЕ: начало — ПЕРЕД текущей цифрой
 		res.kind = .INT_LIT
 
-		// 1. Съедаем целую часть (включая префиксы 0b, 0o, 0x)
 		is_hex := false
 		is_binary := false
 		is_octal := false
 
-		if current == '0' && l.offset + l.w < len(l.data) {
-			peek, _ := utf8.decode_rune_in_string(l.data[l.offset:l.offset + l.w])
-			switch peek {
-			case 'x', 'X':
-				is_hex = true
-				next_rune(l);next_rune(l) // съедаем 0x
-				skip_hex_digits(l)
-			case 'b', 'B':
-				is_binary = true
-				next_rune(l);next_rune(l)
-				skip_binary_digits(l)
-			case 'o', 'O':
-				is_octal = true
-				next_rune(l);next_rune(l)
-				skip_octal_digits(l)
-			case:
-				// просто ноль или обычное начало числа
-				next_rune(l)
+		// 1. Проверяем префиксы 0x, 0b, 0o
+		if current == '0' {
+			if l.offset < len(l.data) {
+				peek_ch, peek_w := utf8.decode_rune_in_string(l.data[l.offset:])
+				if peek_ch == 'x' || peek_ch == 'X' {
+					is_hex = true
+					next_rune(l) // съедаем 'x'
+					next_rune(l) // теперь на первой hex-цифре
+					skip_hex_digits(l)
+				} else if peek_ch == 'b' || peek_ch == 'B' {
+					is_binary = true
+					next_rune(l)
+					next_rune(l)
+					skip_binary_digits(l)
+				} else if peek_ch == 'o' || peek_ch == 'O' {
+					is_octal = true
+					next_rune(l)
+					next_rune(l)
+					skip_octal_digits(l)
+				}
+				// иначе — просто 0, продолжаем как decimal
 			}
-		} else {
-			next_rune(l)
 		}
 
-		// 2. Если не hex/bin/oct — пропускаем обычные цифры + _
+		// 2. Для обычных десятичных — пропускаем цифры
 		if !is_hex && !is_binary && !is_octal {
 			skip_decimal_digits(l)
 		}
 
-		// 3. Проверяем, есть ли точка → это float
-		if l.ch == '.' && !is_hex && !is_binary && !is_octal {
-			// Убедимся, что после точки идёт цифра (иначе это может быть метод: 1.to_string)
-			if l.offset + l.w < len(l.data) {
-				next_char := rune(l.data[l.offset + l.w])
-				if '0' <= next_char && next_char <= '9' {
+		// 3. Дробная часть: только если не hex/bin/oct и текущий символ — точка, и за ней цифра
+		if !is_hex && !is_binary && !is_octal && l.ch == '.' {
+			if l.offset < len(l.data) {
+				next_ch, _ := utf8.decode_rune_in_string(l.data[l.offset:])
+				if '0' <= next_ch && next_ch <= '9' {
 					res.kind = .FLOAT_LIT
 					next_rune(l) // съедаем '.'
 					skip_decimal_digits(l)
@@ -481,37 +480,33 @@ get_token :: proc(l: ^Lexer) -> (res: Token, err: Error) {
 			}
 		}
 
-		// 4. Экспонента (e или E), только для десятичных и только если уже float или может стать float
-		if (res.kind == .FLOAT_LIT || !is_hex && !is_binary && !is_octal) &&
+		// 4. Экспонента
+		if (res.kind == .FLOAT_LIT || (!is_hex && !is_binary && !is_octal)) &&
 		   (l.ch == 'e' || l.ch == 'E') {
 			res.kind = .FLOAT_LIT
 			next_rune(l)
 
-			// Опциональный знак + или -
 			if l.ch == '+' || l.ch == '-' {
 				next_rune(l)
 			}
 
-			if '0' <= l.ch && l.ch <= '9' {
+			if '0' <= l.ch && l.ch <= '9' || l.ch == '_' {
 				skip_decimal_digits(l)
 			} else {
-				err.msg = "Invalid Number"
 				err.type = .Invalid_Number
-				return
+				err.msg = "expected digit after exponent"
+				res.kind = .INVALID
+				return res, err
 			}
 		}
 
-		// 5. Суффиксы: f32, f64, u, i32 и т.д.
-		// if l.ch == 'f' || l.ch == 'F' || l.ch == 'd' || l.ch == 'D' {
-		// 	res.kind = .FLOAT_LIT
-		// 	next_rune(l)
-		// 	// можно дальше парсить f32/f64, если нужно
-		// }
-
+		// ВАЖНО: НЕ продвигаем дальше! Мы уже на первом НЕ-числовом символе
+		// Теперь можно безопасно формировать лексему
+		res.lexeme = l.data[lexeme_start:l.offset]
 	case '/':
 		// Проверяем, не комментарий ли это
 		if l.offset + l.w < len(l.data) {
-			next_ch, _ := utf8.decode_rune_in_string(l.data[l.offset:l.w+1])
+			next_ch, _ := utf8.decode_rune_in_string(l.data[l.offset:l.w + 1])
 
 			if next_ch == '/' {
 				// Однострочный комментарий: //
@@ -626,7 +621,7 @@ get_token :: proc(l: ^Lexer) -> (res: Token, err: Error) {
 		res.kind = .DISTINCT
 	case "true", "false":
 		res.kind = .BOOL_LIT
-	
+
 
 	}
 	return
@@ -639,7 +634,7 @@ tokenize :: proc(data: string) -> (res: [dynamic]Token) {
 	for lex.offset < len(lex.data) {
 		t, err := get_token(&lex)
 		if err.type != .None do log.panic(err)
-		
+
 		append(&res, t)
 	}
 

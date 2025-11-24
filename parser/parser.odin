@@ -69,49 +69,11 @@ consume :: proc(p: ^Parser, kind: lexer.TokenKind) -> bool {
 	return true
 }
 
-// parse_var :: proc(p: ^Parser) -> (d: DeclVar) {
-// 	current_tok := current(p^)
-// 	#partial switch current_tok.kind {
-// 	case .IDENT:
-// 		d.ident = current_tok.lexeme
-
-// 		t := advance(p)
-// 		ok, err := expect(p, .COLON)
-// 		if !ok do log.panic(err)
-
-// 		ty := current(p^)
-// 		log.info(ty.kind)
-// 		#partial switch ty.kind {
-// 		case .INT:
-// 			type := TypeBasic {
-// 				default = int(0),
-// 				kind = .Int,
-// 				ident = nil,
-// 			}
-// 			advance(p)
-// 			ok, err = expect(p, .ASSIGN)
-// 			lit := current(p^)
-// 			#partial switch lit.kind {
-// 			case .INT_LIT:
-// 				value, ok := strconv.parse_int(lit.lexeme)
-// 				assert(ok)
-// 				literal := Literal {
-// 					kind = IntLit {value = value},
-
-// 				}
-// 				d.literal = literal
-// 				return
-// 			}
-// 		}
-// 	}
-
-// 	return
-// }
-
 parse_literal :: proc(p: ^Parser) -> (l: Literal) {
 	curr := current(p^)
 	#partial switch curr.kind {
 	case .INT_LIT:
+		log.info(curr.lexeme)
 		val, ok := strconv.parse_int(curr.lexeme)
 		assert(ok)
 		l.kind = IntLit(val)
@@ -127,108 +89,8 @@ parse_literal :: proc(p: ^Parser) -> (l: Literal) {
 		assert(ok)
 		l.kind = BoolLit(val)
 	case .STRUCT:
-		t := advance(p)
-		ok, _ := expect(p, .LBRACE)
-		assert(ok)
-
-		struct_lit: StructLit
-		fields: [dynamic]StructField
-		loop: for {
-			f: StructField
-			f.ident = current(p^).lexeme
-			advance(p)
-			assert(consume(p, .COLON))
-
-			ty := parse_type(p)
-			f.type = ty
-			append(&fields, f)
-
-			advance(p)
-			c := current(p^)
-			if c.kind == .COMMA {
-				advance(p)
-				c = current(p^)
-				if c.kind == .RBRACE {
-					break loop
-				} else {
-					continue loop
-				}
-			} else {
-				advance(p)
-				c = current(p^)
-				if c.kind == .RBRACE {
-					struct_lit.fields = fields[:]
-					break loop
-				}
-			}
-
-		}
-		l.kind = struct_lit
 	case .ENUM:
-		t := advance(p)
-		ok, _ := expect(p, .LBRACE)
-		assert(ok)
-		enum_lit: EnumLit
-		fields: [dynamic]EnumField
-
-		e_loop: for {
-			f: EnumField
-			c := current(p^)
-
-			#partial switch c.kind {
-			case .RBRACE:
-				break e_loop
-			case .IDENT:
-				f.ident = c.lexeme
-				// append(&fields, EnumField(c.lexeme))
-				advance(p)
-
-				if current(p^).kind == .ASSIGN {
-					val_tol := advance(p)
-					if val_tol.kind != .INT_LIT {
-						log.panic("Enum value must be int")
-					}
-					log.info(val_tol.lexeme)
-					val, ok := strconv.parse_int(val_tol.lexeme)
-					assert(ok)
-					f.value = val
-					advance(p)
-					continue e_loop
-				}
-				if len(fields) > 0 {
-					v := fields[len(fields) - 1].value + 1
-					f.value = v
-				}
-				append(&fields, f)
-
-				continue e_loop
-			case .COMMA:
-				advance(p)
-				if current(p^).kind == .RBRACE {
-					break e_loop
-				}
-				continue e_loop
-			}
-		}
-		enum_lit.fields = fields[:]
-		l.kind = enum_lit
-
 	case .UNION:
-		t := advance(p)
-		ok, _ := expect(p, .LBRACE)
-		assert(ok)
-
-		union_lit: UnionLit
-		tags: [dynamic]UnionTag
-
-		u_loop: for {
-			c := current(p^)
-			#partial switch c.kind {
-			case .IDENT:
-
-			}
-		}
-
 	}
 
 	return
@@ -299,6 +161,13 @@ parse_type :: proc(p: ^Parser) -> (t: Type) {
 			kind    = .Bool,
 		}
 
+	case .LBRACK:
+		next := peek(p^, 1)
+		if next.kind == .INT_LIT do t = parse_array_type(p)
+		if next.kind == .RBRACK  do t = parse_slice_type(p)
+
+	case .MAP:
+		t = parse_map_type(p)		
 	case .STRUCT:
 		t = parse_struct_type(p)
 	case .ENUM:
@@ -362,7 +231,7 @@ parse_enum_type :: proc(p: ^Parser) -> (t: Type) {
 		case .IDENT:
 			f.ident = c.lexeme
 			if len(fields) > 0 {
-				f.value = fields[len(fields)-1].value + 1
+				f.value = fields[len(fields) - 1].value + 1
 			}
 			advance(p)
 			c = current(p^)
@@ -382,22 +251,64 @@ parse_enum_type :: proc(p: ^Parser) -> (t: Type) {
 		case .COMMA:
 			advance(p)
 			continue loop
-		
+
 		case .RBRACE:
 			advance(p)
 			break loop
-		
+
 		}
 	}
 
 	et.values = fields[:]
 	t.kind = et
+
+	return
+}
+
+parse_array_type :: proc(p: ^Parser) -> (t: Type) {
+	advance(p)
+	lit := parse_literal(p);advance(p)
+	ok, _ := expect(p, .RBRACK)
+	ty := parse_type(p)
+
+	t.kind = ArrayType {
+		size = lit,
+		type = &ty
+	}
+	
+	return
+}
+
+parse_slice_type :: proc(p: ^Parser) -> (t: Type) {
+	advance(p)
+	ok, _ := expect(p, .RBRACK);assert(ok)
+	ty := parse_type(p)
+
+	t.kind = SliceType {
+		type = &ty
+	}
+	
+	return
+}
+
+parse_map_type :: proc(p: ^Parser) -> (t: Type) {
+	advance(p)
+	ok, _ := expect(p, .LBRACK); assert(ok)
+	key_ty := parse_type(p)
+	advance(p)
+	ok, _ = expect(p, .RBRACK); assert(ok)
+	val_ty := parse_type(p)
+
+	t.kind = MapType {
+		key = &key_ty,
+		value = &val_ty
+	}
 	
 	return
 }
 
 tt :: proc() {
-	tokens := lexer.tokenize("enum{a,b,c}")
+	tokens := lexer.tokenize("map[string]int")
 	parser := make_parser(tokens[:])
 	lit := parse_type(&parser)
 	log.info(lit)
