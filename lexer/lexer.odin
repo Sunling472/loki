@@ -1,6 +1,5 @@
 package lexer
 
-import "core:encoding/json"
 import "core:log"
 import "core:unicode/utf8"
 
@@ -430,6 +429,8 @@ get_token :: proc(l: ^Lexer) -> (res: Token, err: Error) {
 		res.kind = .LBRACE
 	case '}':
 		res.kind = .RBRACE
+	case ',':
+		res.kind = .COMMA
 	case '0' ..= '9':
 		lexeme_start := l.offset
 		res.kind = .INT_LIT
@@ -440,7 +441,7 @@ get_token :: proc(l: ^Lexer) -> (res: Token, err: Error) {
 		is_octal := false
 
 		if current == '0' && l.offset + l.w < len(l.data) {
-			peek := rune(l.data[l.offset + l.w])
+			peek, _ := utf8.decode_rune_in_string(l.data[l.offset:l.offset + l.w])
 			switch peek {
 			case 'x', 'X':
 				is_hex = true
@@ -623,6 +624,8 @@ get_token :: proc(l: ^Lexer) -> (res: Token, err: Error) {
 		res.kind = .IMPORT
 	case "distinct":
 		res.kind = .DISTINCT
+	case "true", "false":
+		res.kind = .BOOL_LIT
 	
 
 	}
