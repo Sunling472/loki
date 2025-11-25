@@ -376,6 +376,7 @@ parse_union_tags :: proc(p: ^Parser) -> (tags: [dynamic]UnionTag) {
 			t.ident = c.lexeme; advance(p)
 			ok, _ := expect(p, .COLON); assert(ok)
 			ty := parse_type(p)
+			t.value = ty
 			append(&tags, t)
 			advance(p)
 			continue loop
