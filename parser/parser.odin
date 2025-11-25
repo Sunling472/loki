@@ -160,6 +160,10 @@ parse_type :: proc(p: ^Parser) -> (t: Type) {
 			default = false,
 			kind    = .Bool,
 		}
+	case .VOID:
+		t.kind = TypeBasic {
+			kind = .Void
+		}
 
 	case .LBRACK:
 		next := peek(p^, 1)
@@ -172,7 +176,12 @@ parse_type :: proc(p: ^Parser) -> (t: Type) {
 		t = parse_struct_type(p)
 	case .ENUM:
 		t = parse_enum_type(p)
+	case .PC:
+		t = parse_proc_type(p)
+	case .UNION:
+		t = parse_union_type(p)
 	}
+	
 	return
 }
 
@@ -240,7 +249,6 @@ parse_enum_type :: proc(p: ^Parser) -> (t: Type) {
 			if c.kind == .ASSIGN {
 				advance(p)
 				lit_tok := current(p^)
-				log.info(lit_tok.lexeme)
 				val, ok := strconv.parse_int(lit_tok.lexeme)
 				assert(ok)
 				f.value = val
@@ -307,8 +315,97 @@ parse_map_type :: proc(p: ^Parser) -> (t: Type) {
 	return
 }
 
+parse_proc_params :: proc(p: ^Parser) -> (res: [dynamic]ProcParam) {
+	loop: for {
+		pp: ProcParam
+
+		c := current(p^)
+
+		#partial switch c.kind {
+		case .IDENT:
+			pp.ident = c.lexeme; advance(p)
+			ok, _ := expect(p, .COLON); assert(ok)
+			ty := parse_type(p)
+			pp.type = ty
+			c = advance(p)
+			if c.kind == .ASSIGN {
+				advance(p)
+				lit := parse_literal(p)
+				pp.literal = lit
+				log.info(lit)
+				advance(p)
+			}
+			append(&res, pp)
+			continue
+
+		case .COMMA:
+			advance(p)
+			continue loop
+
+		case .RPAREN:
+			advance(p)
+			break loop
+		}
+	}
+
+	return
+}
+
+parse_proc_type :: proc(p: ^Parser) -> (t: Type) {
+	advance(p)
+	ok, _  := expect(p, .LPAREN); assert(ok)
+	params := parse_proc_params(p)
+	ok, _   = expect(p, .RARROW); assert(ok)
+	ret_ty := parse_type(p); advance(p)
+	t.kind = ProcType {
+		params = params[:],
+		ret_ty = &ret_ty,
+	}
+	
+
+	return
+}
+
+parse_union_tags :: proc(p: ^Parser) -> (tags: [dynamic]UnionTag) {
+	loop: for {
+		t: UnionTag
+		c := current(p^)
+
+		#partial switch c.kind {
+		case .IDENT:
+			t.ident = c.lexeme; advance(p)
+			ok, _ := expect(p, .COLON); assert(ok)
+			ty := parse_type(p)
+			append(&tags, t)
+			advance(p)
+			continue loop
+		case .COMMA:
+			advance(p)
+			continue loop
+		case .RBRACE:
+			advance(p)
+			break loop
+		}
+	}
+	
+	return
+}
+
+parse_union_type :: proc(p: ^Parser) -> (t: Type) {
+	ut: UnionType
+	
+	advance(p)
+	ok, _ := expect(p, .LBRACE); assert(ok)
+	c := current(p^)
+	tags := parse_union_tags(p)
+	ut.tags = tags[:]
+	t.kind = ut
+
+	return
+}
+
 tt :: proc() {
-	tokens := lexer.tokenize("map[string]int")
+	tokens := lexer.tokenize("union {Ok: int, Error: string}")
 	parser := make_parser(tokens[:])
 	lit := parse_type(&parser)
 	log.info(lit)

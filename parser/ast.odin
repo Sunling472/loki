@@ -48,7 +48,7 @@ DeclAlias :: struct {
 
 DeclInterface :: struct {
 	ident:   string,
-	methods: []TypeProc,
+	methods: []ProcType,
 }
 
 LiteralKind :: union {
@@ -101,12 +101,12 @@ EnumField :: struct {
 
 UnionTag :: struct {
 	ident: string,
-	value: Literal,
+	value: Type,
 }
 
 ProcParam :: struct {
 	ident:   Maybe(string),
-	type:    Node,
+	type:    Type,
 	literal: Literal,
 }
 
@@ -117,9 +117,9 @@ Type :: struct {
 TypeKind :: union {
 	TypeBasic,
 	EnumType,
-	TypeUnion,
+	UnionType,
 	StructType,
-	TypeProc,
+	ProcType,
 	ArrayType,
 	SliceType,
 	MapType,
@@ -196,16 +196,14 @@ EnumType :: struct {
 	values: []EnumField,
 }
 
-TypeUnion :: struct {
-	ident:      Maybe(string),
+UnionType :: struct {
 	gen_params: []Node,
-	tags:       []Node,
+	tags:       []UnionTag,
 }
 
-TypeProc :: struct {
-	ident:      Maybe(string),
+ProcType :: struct {
 	gen_params: []Node,
 	params:     []ProcParam,
-	ret_ty:     Node,
+	ret_ty:     ^Type,
 }
 
