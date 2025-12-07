@@ -1,12 +1,5 @@
-package main
+package example
 
 import s "core:size"
 
-main :: pc () {
-	$tmp :: $arena(10*s.Mb, .Dynamic)
-	res := example() in $tmp // res = 10
-}
-
-example :: pc () -> int in @heap {
-	<- 10
-}
+display :: pc () -> void in @heap {}

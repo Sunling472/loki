@@ -1,8 +1,8 @@
 // The tokenizer (lexer) for `Odin` files, used to create tooling.
 package tokenizer
 
-import "core:log"
 import "core:fmt"
+import "core:log"
 import "core:unicode"
 import "core:unicode/utf8"
 
@@ -11,29 +11,33 @@ Error_Handler :: #type proc(pos: Pos, fmt: string, args: ..any)
 Flag :: enum {
 	Insert_Semicolon,
 }
-Flags :: distinct bit_set[Flag; u32]
+Flags :: distinct bit_set[Flag;u32]
 
 Tokenizer :: struct {
 	// Immutable data
-	path: string,
-	src:  string,
-	err:  Error_Handler,
-
-	flags: Flags,
+	path:             string,
+	src:              string,
+	err:              Error_Handler,
+	flags:            Flags,
 
 	// Tokenizing state
-	ch:          rune,
-	offset:      int,
-	read_offset: int,
-	line_offset: int,
-	line_count:  int,
+	ch:               rune,
+	offset:           int,
+	read_offset:      int,
+	line_offset:      int,
+	line_count:       int,
 	insert_semicolon: bool,
 
 	// Mutable data
-	error_count: int,
+	error_count:      int,
 }
 
-init :: proc(t: ^Tokenizer, src: string, path: string, err: Error_Handler = default_error_handler) {
+init :: proc(
+	t: ^Tokenizer,
+	src: string,
+	path: string,
+	err: Error_Handler = default_error_handler,
+) {
 	t.src = src
 	t.err = err
 	t.ch = ' '
@@ -56,12 +60,7 @@ offset_to_pos :: proc(t: ^Tokenizer, offset: int) -> Pos {
 	line := t.line_count
 	column := offset - t.line_offset + 1
 
-	return Pos {
-		file = t.path,
-		offset = offset,
-		line = line,
-		column = column,
-	}
+	return Pos{file = t.path, offset = offset, line = line, column = column}
 }
 
 default_error_handler :: proc(pos: Pos, msg: string, args: ..any) {
@@ -110,8 +109,8 @@ advance_rune :: proc(t: ^Tokenizer) {
 }
 
 peek_byte :: proc(t: ^Tokenizer, offset := 0) -> byte {
-	if t.read_offset+offset < len(t.src) {
-		return t.src[t.read_offset+offset]
+	if t.read_offset + offset < len(t.src) {
+		return t.src[t.read_offset + offset]
 	}
 	return 0
 }
@@ -143,7 +142,7 @@ is_letter :: proc(r: rune) -> bool {
 		switch r {
 		case '_':
 			return true
-		case 'A'..='Z', 'a'..='z':
+		case 'A' ..= 'Z', 'a' ..= 'z':
 			return true
 		}
 	}
@@ -158,10 +157,10 @@ is_digit :: proc(r: rune) -> bool {
 
 
 scan_comment :: proc(t: ^Tokenizer) -> string {
-	offset := t.offset-1
+	offset := t.offset - 1
 	next := -1
 	general: {
-		if t.ch == '/' || t.ch == '!' { // // #! comments
+		if t.ch == '/' || t.ch == '!' { 	// // #! comments
 			advance_rune(t)
 			for t.ch != '\n' && t.ch >= 0 {
 				advance_rune(t)
@@ -197,11 +196,11 @@ scan_comment :: proc(t: ^Tokenizer) -> string {
 		error(t, offset, "comment not terminated")
 	}
 
-	lit := t.src[offset : t.offset]
+	lit := t.src[offset:t.offset]
 
 	// NOTE(bill): Strip CR for line comments
-	for len(lit) > 2 && lit[1] == '/' && lit[len(lit)-1] == '\r' {
-		lit = lit[:len(lit)-1]
+	for len(lit) > 2 && lit[1] == '/' && lit[len(lit) - 1] == '\r' {
+		lit = lit[:len(lit) - 1]
 	}
 
 
@@ -222,7 +221,7 @@ scan_file_tag :: proc(t: ^Tokenizer) -> string {
 		advance_rune(t)
 	}
 
-	return string(t.src[offset : t.offset])
+	return string(t.src[offset:t.offset])
 }
 
 scan_identifier :: proc(t: ^Tokenizer) -> string {
@@ -232,11 +231,11 @@ scan_identifier :: proc(t: ^Tokenizer) -> string {
 		advance_rune(t)
 	}
 
-	return string(t.src[offset : t.offset])
+	return string(t.src[offset:t.offset])
 }
 
 scan_string :: proc(t: ^Tokenizer) -> string {
-	offset := t.offset-1
+	offset := t.offset - 1
 
 	for {
 		ch := t.ch
@@ -253,11 +252,11 @@ scan_string :: proc(t: ^Tokenizer) -> string {
 		}
 	}
 
-	return string(t.src[offset : t.offset])
+	return string(t.src[offset:t.offset])
 }
 
 scan_raw_string :: proc(t: ^Tokenizer) -> string {
-	offset := t.offset-1
+	offset := t.offset - 1
 
 	for {
 		ch := t.ch
@@ -271,17 +270,17 @@ scan_raw_string :: proc(t: ^Tokenizer) -> string {
 		}
 	}
 
-	return string(t.src[offset : t.offset])
+	return string(t.src[offset:t.offset])
 }
 
 digit_val :: proc(r: rune) -> int {
 	switch r {
-	case '0'..='9':
-		return int(r-'0')
-	case 'A'..='F':
-		return int(r-'A' + 10)
-	case 'a'..='f':
-		return int(r-'a' + 10)
+	case '0' ..= '9':
+		return int(r - '0')
+	case 'A' ..= 'F':
+		return int(r - 'A' + 10)
+	case 'a' ..= 'f':
+		return int(r - 'a' + 10)
 	}
 	return 16
 }
@@ -296,7 +295,7 @@ scan_escape :: proc(t: ^Tokenizer) -> bool {
 		advance_rune(t)
 		return true
 
-	case '0'..='7':
+	case '0' ..= '7':
 		n, base, max = 3, 8, 255
 	case 'x':
 		advance_rune(t)
@@ -328,7 +327,7 @@ scan_escape :: proc(t: ^Tokenizer) -> bool {
 			return false
 		}
 
-		x = x*base + d
+		x = x * base + d
 		advance_rune(t)
 		n -= 1
 	}
@@ -341,7 +340,7 @@ scan_escape :: proc(t: ^Tokenizer) -> bool {
 }
 
 scan_rune :: proc(t: ^Tokenizer) -> string {
-	offset := t.offset-1
+	offset := t.offset - 1
 	valid := true
 	n := 0
 	for {
@@ -359,7 +358,7 @@ scan_rune :: proc(t: ^Tokenizer) -> string {
 		}
 		n += 1
 		if ch == '\\' {
-			if !scan_escape(t)  {
+			if !scan_escape(t) {
 				valid = false
 			}
 		}
@@ -369,7 +368,7 @@ scan_rune :: proc(t: ^Tokenizer) -> string {
 		error(t, offset, "illegal rune literal")
 	}
 
-	return string(t.src[offset : t.offset])
+	return string(t.src[offset:t.offset])
 }
 
 scan_number :: proc(t: ^Tokenizer, seen_decimal_point: bool) -> (Token_Kind, string) {
@@ -435,11 +434,16 @@ scan_number :: proc(t: ^Tokenizer, seen_decimal_point: bool) -> (Token_Kind, str
 
 			advance_rune(t)
 			switch t.ch {
-			case 'b': int_base(t, &kind,  2, "illegal binary integer")
-			case 'o': int_base(t, &kind,  8, "illegal octal integer")
-			case 'd': int_base(t, &kind, 10, "illegal decimal integer")
-			case 'z': int_base(t, &kind, 12, "illegal dozenal integer")
-			case 'x': int_base(t, &kind, 16, "illegal hexadecimal integer")
+			case 'b':
+				int_base(t, &kind, 2, "illegal binary integer")
+			case 'o':
+				int_base(t, &kind, 8, "illegal octal integer")
+			case 'd':
+				int_base(t, &kind, 10, "illegal decimal integer")
+			case 'z':
+				int_base(t, &kind, 12, "illegal dozenal integer")
+			case 'x':
+				int_base(t, &kind, 16, "illegal hexadecimal integer")
 			case 'h':
 				prev := t.offset
 				advance_rune(t)
@@ -448,7 +452,7 @@ scan_number :: proc(t: ^Tokenizer, seen_decimal_point: bool) -> (Token_Kind, str
 					kind = .Invalid
 					error(t, t.offset, "illegal hexadecimal floating-point number")
 				} else {
-					sub := t.src[prev+1 : t.offset]
+					sub := t.src[prev + 1:t.offset]
 					digit_count := 0
 					for d in sub {
 						if d != '_' {
@@ -457,9 +461,15 @@ scan_number :: proc(t: ^Tokenizer, seen_decimal_point: bool) -> (Token_Kind, str
 					}
 
 					switch digit_count {
-					case 4, 8, 16: break
+					case 4, 8, 16:
+						break
 					case:
-						error(t, t.offset, "invalid hexadecimal floating-point number, expected 4, 8, or 16 digits, got %d", digit_count)
+						error(
+							t,
+							t.offset,
+							"invalid hexadecimal floating-point number, expected 4, 8, or 16 digits, got %d",
+							digit_count,
+						)
 					}
 				}
 
@@ -469,11 +479,11 @@ scan_number :: proc(t: ^Tokenizer, seen_decimal_point: bool) -> (Token_Kind, str
 				if t.ch == '.' {
 					seen_point = true
 					if scan_fraction(t, &kind) {
-						return kind, string(t.src[offset : t.offset])
+						return kind, string(t.src[offset:t.offset])
 					}
 				}
 				scan_exponent(t, &kind)
-				return kind, string(t.src[offset : t.offset])
+				return kind, string(t.src[offset:t.offset])
 			}
 		}
 	}
@@ -481,12 +491,12 @@ scan_number :: proc(t: ^Tokenizer, seen_decimal_point: bool) -> (Token_Kind, str
 	scan_mantissa(t, 10)
 
 	if scan_fraction(t, &kind) {
-		return kind, string(t.src[offset : t.offset])
+		return kind, string(t.src[offset:t.offset])
 	}
 
 	scan_exponent(t, &kind)
 
-	return kind, string(t.src[offset : t.offset])
+	return kind, string(t.src[offset:t.offset])
 }
 
 
@@ -512,7 +522,7 @@ scan :: proc(t: ^Tokenizer) -> Token {
 			}
 			for keyword, i in custom_keyword_tokens {
 				if lit == keyword {
-					kind = Token_Kind(i+1) + .B_Custom_Keyword_Begin
+					kind = Token_Kind(i + 1) + .B_Custom_Keyword_Begin
 					break check_keyword
 				}
 			}
@@ -557,7 +567,7 @@ scan :: proc(t: ^Tokenizer) -> Token {
 		case '.':
 			kind = .Period
 			switch t.ch {
-			case '0'..='9':
+			case '0' ..= '9':
 				kind, lit = scan_number(t, true)
 			case '.':
 				advance_rune(t)
@@ -571,19 +581,32 @@ scan :: proc(t: ^Tokenizer) -> Token {
 					kind = .Range_Full
 				}
 			}
-		case '@': kind = .At
-		case '$': kind = .Dollar
-		case '?': kind = .Question
-		case '^': kind = .Caret  // ИЗМЕНЕНО: было Pointer
-		case ';': kind = .Semicolon
-		case ',': kind = .Comma
-		case ':': kind = .Colon
-		case '(': kind = .Open_Paren
-		case ')': kind = .Close_Paren
-		case '[': kind = .Open_Bracket
-		case ']': kind = .Close_Bracket
-		case '{': kind = .Open_Brace
-		case '}': kind = .Close_Brace
+		case '@':
+			kind = .At
+		case '$':
+			kind = .Dollar
+		case '?':
+			kind = .Question
+		case '^':
+			kind = .Caret // ИЗМЕНЕНО: было Pointer
+		case ';':
+			kind = .Semicolon
+		case ',':
+			kind = .Comma
+		case ':':
+			kind = .Colon
+		case '(':
+			kind = .Open_Paren
+		case ')':
+			kind = .Close_Paren
+		case '[':
+			kind = .Open_Bracket
+		case ']':
+			kind = .Close_Bracket
+		case '{':
+			kind = .Open_Brace
+		case '}':
+			kind = .Close_Brace
 		case '%':
 			kind = .Mod
 			switch t.ch {
@@ -610,7 +633,8 @@ scan :: proc(t: ^Tokenizer) -> Token {
 			case '=':
 				advance_rune(t)
 				kind = .Cmp_Eq
-			case '>':  // НОВОЕ: => для method binding
+			case '>':
+				// НОВОЕ: => для method binding
 				advance_rune(t)
 				kind = .Fat_Arrow
 			}
@@ -666,9 +690,10 @@ scan :: proc(t: ^Tokenizer) -> Token {
 					advance_rune(t)
 					kind = .Shl_Eq
 				}
-			case '-':  // НОВОЕ: <- для return
+			case '-':
+				// НОВОЕ: <- для return
 				advance_rune(t)
-				kind = .Left_Arrow
+				kind = .Return
 			}
 		case '>':
 			kind = .Gt
@@ -749,11 +774,30 @@ scan :: proc(t: ^Tokenizer) -> Token {
 	if .Insert_Semicolon in t.flags {
 		#partial switch kind {
 		case .Invalid, .Comment:
-			// Preserve insert_semicolon info
-		case .Ident, .Context, .Typeid, .Break, .Continue, .Fallthrough, .Return,
-		     .Integer, .Float, .Imag, .Rune, .String, .Undef,
-		     .Question, .Caret, .Close_Paren, .Close_Bracket, .Close_Brace,  // ИЗМЕНЕНО: Pointer -> Caret
-		     .Increment, .Decrement, .Or_Return, .Or_Break, .Or_Continue:
+		// Preserve insert_semicolon info
+		case .Ident,
+		     .Context,
+		     .Typeid,
+		     .Break,
+		     .Continue,
+		     .Fallthrough,
+		     .Return,
+		     .Integer,
+		     .Float,
+		     .Imag,
+		     .Rune,
+		     .String,
+		     .Undef,
+		     .Question,
+		     .Caret,
+		     .Close_Paren,
+		     .Close_Bracket,
+		     .Close_Brace, // ИЗМЕНЕНО: Pointer -> Caret
+		     .Increment,
+		     .Decrement,
+		     .Or_Return,
+		     .Or_Break,
+		     .Or_Continue:
 			/*fallthrough*/
 			t.insert_semicolon = true
 		case:
@@ -763,7 +807,7 @@ scan :: proc(t: ^Tokenizer) -> Token {
 	}
 
 	if lit == "" {
-		lit = string(t.src[offset : t.offset])
+		lit = string(t.src[offset:t.offset])
 	}
 	return Token{kind, lit, pos}
 }

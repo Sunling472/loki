@@ -1,22 +1,22 @@
 package ast
 
-import "base:intrinsics"
-import "core:mem"
-import "core:fmt"
-import "core:reflect"
 import "../tokenizer"
+import "base:intrinsics"
+import "core:fmt"
+import "core:mem"
+import "core:reflect"
 _ :: intrinsics
 
 new_from_positions :: proc($T: typeid, pos, end: tokenizer.Pos) -> ^T {
 	n, _ := mem.new(T)
 	n.pos = pos
 	n.end = end
-	n.derived = n
+	// n.derived = n
 	base: ^Node = n // dummy check
 	_ = base // "Use" type to make -vet happy
-	when intrinsics.type_has_field(T, "derived_expr") {
-		n.derived_expr = n
-	}
+	// when intrinsics.type_has_field(T, "derived_expr") {
+	// 	n.derived_expr = n
+	// }
 	when intrinsics.type_has_field(T, "derived_stmt") {
 		n.derived_stmt = n
 	}
@@ -32,7 +32,7 @@ new :: proc {
 	new_from_pos_and_end_node,
 }
 
-clone :: proc{
+clone :: proc {
 	clone_node,
 	clone_expr,
 	clone_stmt,
@@ -77,12 +77,12 @@ clone_node :: proc(node: ^Node) -> ^Node {
 		return nil
 	}
 
-	size  := size_of(Node)
+	size := size_of(Node)
 	align := align_of(Node)
 	ti := reflect.union_variant_type_info(node.derived)
 	if ti != nil {
 		elem := ti.variant.(reflect.Type_Info_Pointer).elem
-		size  = elem.size
+		size = elem.size
 		align = elem.align
 	}
 
@@ -134,9 +134,9 @@ clone_node :: proc(node: ^Node) -> ^Node {
 			r.body = clone(r.body)
 			// НОВОЕ для Loki: клонируем контракт и mutability
 			r.allocator_contract = auto_cast clone(r.allocator_contract)
-			// mutability - это enum, копируется автоматически
+		// mutability - это enum, копируется автоматически
 		case ^Comp_Lit:
-			r.type  = clone(r.type)
+			r.type = clone(r.type)
 			r.elems = clone(r.elems)
 
 		case ^Tag_Expr:
@@ -144,7 +144,7 @@ clone_node :: proc(node: ^Node) -> ^Node {
 		case ^Unary_Expr:
 			r.expr = clone(r.expr)
 		case ^Binary_Expr:
-			r.left  = clone(r.left)
+			r.left = clone(r.left)
 			r.right = clone(r.right)
 		case ^Paren_Expr:
 			r.expr = clone(r.expr)
@@ -160,15 +160,15 @@ clone_node :: proc(node: ^Node) -> ^Node {
 			r.expr = clone(r.expr)
 			r.index = clone(r.index)
 		case ^Matrix_Index_Expr:
-			r.expr         = clone(r.expr)
-			r.row_index    = clone(r.row_index)
+			r.expr = clone(r.expr)
+			r.row_index = clone(r.row_index)
 			r.column_index = clone(r.column_index)
 		// УДАЛЕНО для Loki: Deref_Expr
 		// case ^Deref_Expr:
 		// 	r.expr = clone(r.expr)
 		case ^Slice_Expr:
 			r.expr = clone(r.expr)
-			r.low  = clone(r.low)
+			r.low = clone(r.low)
 			r.high = clone(r.high)
 		case ^Call_Expr:
 			r.expr = clone(r.expr)
@@ -179,20 +179,20 @@ clone_node :: proc(node: ^Node) -> ^Node {
 			r.field = clone(r.field)
 			r.value = clone(r.value)
 		case ^Ternary_If_Expr:
-			r.x    = clone(r.x)
+			r.x = clone(r.x)
 			r.cond = clone(r.cond)
-			r.y    = clone(r.y)
+			r.y = clone(r.y)
 		case ^Ternary_When_Expr:
-			r.x    = clone(r.x)
+			r.x = clone(r.x)
 			r.cond = clone(r.cond)
-			r.y    = clone(r.y)
+			r.y = clone(r.y)
 		case ^Or_Else_Expr:
-			r.x    = clone(r.x)
-			r.y    = clone(r.y)
+			r.x = clone(r.x)
+			r.y = clone(r.y)
 		case ^Or_Return_Expr:
 			r.expr = clone(r.expr)
 		case ^Or_Branch_Expr:
-			r.expr  = clone(r.expr)
+			r.expr = clone(r.expr)
 			r.label = clone(r.label)
 		case ^Type_Assertion:
 			r.expr = clone(r.expr)
@@ -203,15 +203,15 @@ clone_node :: proc(node: ^Node) -> ^Node {
 		case ^Auto_Cast:
 			r.expr = clone(r.expr)
 		case ^Inline_Asm_Expr:
-			r.param_types        = clone(r.param_types)
-			r.return_type        = clone(r.return_type)
+			r.param_types = clone(r.param_types)
+			r.return_type = clone(r.return_type)
 			r.constraints_string = clone(r.constraints_string)
-			r.asm_string         = clone(r.asm_string)
+			r.asm_string = clone(r.asm_string)
 
 		case ^Bad_Stmt:
-			// empty
+		// empty
 		case ^Empty_Stmt:
-			// empty
+		// empty
 		case ^Expr_Stmt:
 			r.expr = clone(r.expr)
 		case ^Tag_Stmt:
@@ -224,14 +224,14 @@ clone_node :: proc(node: ^Node) -> ^Node {
 			r.label = clone(r.label)
 			r.stmts = clone(r.stmts)
 		case ^If_Stmt:
-			r.label     = clone(r.label)
-			r.init      = clone(r.init)
-			r.cond      = clone(r.cond)
-			r.body      = clone(r.body)
+			r.label = clone(r.label)
+			r.init = clone(r.init)
+			r.cond = clone(r.cond)
+			r.body = clone(r.body)
 			r.else_stmt = clone(r.else_stmt)
 		case ^When_Stmt:
-			r.cond      = clone(r.cond)
-			r.body      = clone(r.body)
+			r.cond = clone(r.cond)
+			r.body = clone(r.body)
 			r.else_stmt = clone(r.else_stmt)
 		case ^Return_Stmt:
 			r.results = clone(r.results)
@@ -265,7 +265,7 @@ clone_node :: proc(node: ^Node) -> ^Node {
 			r.body = clone(r.body)
 		case ^Type_Switch_Stmt:
 			r.label = clone(r.label)
-			r.tag  = clone(r.tag)
+			r.tag = clone(r.tag)
 			r.expr = clone(r.expr)
 			r.body = clone(r.body)
 		case ^Branch_Stmt:
@@ -275,26 +275,26 @@ clone_node :: proc(node: ^Node) -> ^Node {
 		case ^Bad_Decl:
 		case ^Value_Decl:
 			r.attributes = clone(r.attributes)
-			r.names      = clone(r.names)
-			r.type       = clone(r.type)
-			r.values     = clone(r.values)
+			r.names = clone(r.names)
+			r.type = clone(r.type)
+			r.values = clone(r.values)
 		case ^Package_Decl:
 		case ^Import_Decl:
 		case ^Foreign_Block_Decl:
-			r.attributes      = clone(r.attributes)
+			r.attributes = clone(r.attributes)
 			r.foreign_library = clone(r.foreign_library)
-			r.body            = clone(r.body)
+			r.body = clone(r.body)
 		case ^Foreign_Import_Decl:
 			r.attributes = clone_dynamic_array(r.attributes)
 			r.name = auto_cast clone(r.name)
-			r.fullpaths  = clone_array(r.fullpaths)
+			r.fullpaths = clone_array(r.fullpaths)
 		case ^Proc_Group:
 			r.args = clone(r.args)
 		case ^Attribute:
 			r.elems = clone(r.elems)
 		case ^Field:
-			r.names         = clone(r.names)
-			r.type          = clone(r.type)
+			r.names = clone(r.names)
+			r.type = clone(r.type)
 			r.default_value = clone(r.default_value)
 		case ^Field_List:
 			r.list = clone(r.list)
@@ -308,7 +308,7 @@ clone_node :: proc(node: ^Node) -> ^Node {
 			r.type = auto_cast clone(r.type)
 			r.specialization = clone(r.specialization)
 		case ^Proc_Type:
-			r.params  = auto_cast clone(r.params)
+			r.params = auto_cast clone(r.params)
 			r.results = auto_cast clone(r.results)
 		// УДАЛЕНО для Loki: Pointer_Type, Multi_Pointer_Type
 		// case ^Pointer_Type:
@@ -317,7 +317,7 @@ clone_node :: proc(node: ^Node) -> ^Node {
 		// case ^Multi_Pointer_Type:
 		// 	r.elem = clone(r.elem)
 		case ^Array_Type:
-			r.len  = clone(r.len)
+			r.len = clone(r.len)
 			r.elem = clone(r.elem)
 		case ^Dynamic_Array_Type:
 			r.elem = clone(r.elem)
@@ -350,36 +350,36 @@ clone_node :: proc(node: ^Node) -> ^Node {
 		// 	r.type = clone(r.type)
 		case ^Bit_Field_Type:
 			r.backing_type = clone(r.backing_type)
-			r.fields       = auto_cast clone(r.fields)
+			r.fields = auto_cast clone(r.fields)
 		case ^Bit_Field_Field:
-			r.name     = clone(r.name)
-			r.type     = clone(r.type)
+			r.name = clone(r.name)
+			r.type = clone(r.type)
 			r.bit_size = clone(r.bit_size)
-		
+
 		// ============================================
 		// НОВОЕ для Loki
 		// ============================================
-		
+
 		case ^Allocator_Expr:
 			r.name = auto_cast clone(r.name)
 			r.kind = clone(r.kind)
 			r.size = clone(r.size)
 			r.flags = clone(r.flags)
-		
+
 		case ^Named_Allocator:
 			r.name = auto_cast clone(r.name)
 			r.allocator = auto_cast clone(r.allocator)
-			// docs и comment клонируются автоматически через mem.copy
-		
+		// docs и comment клонируются автоматически через mem.copy
+
 		case ^Allocator_Usage:
 			r.allocator = clone(r.allocator)
-			// transfer_ownership - это bool, копируется автоматически
-		
+		// transfer_ownership - это bool, копируется автоматически
+
 		case ^Method_Binding:
 			r.receiver = clone(r.receiver)
 			r.interfaces = clone(r.interfaces)
 			r.methods = clone(r.methods)
-		
+
 		case:
 			fmt.panicf("Unhandled node kind: %v", r)
 		}

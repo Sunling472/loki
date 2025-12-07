@@ -750,6 +750,7 @@ Proc_Type :: struct {
 	tags:      Proc_Tags,
 	generic:   bool,
 	diverging: bool,
+	allocator_contract: ^Allocator_Expr,
 }
 
 Pointer_Type :: struct {

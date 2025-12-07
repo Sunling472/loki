@@ -47,7 +47,7 @@ Token_Kind :: enum u32 {
 		Eq,       // =
 		Not,      // !
 		Hash,     // #
-		At,       // @
+		At,       // @ добавить  @heap @heap(min_size: uint)
 		Dollar,   // $
 		Caret,    // ^ (было Pointer) - теперь для ownership transfer
 		Question, // ?

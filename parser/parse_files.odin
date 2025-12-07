@@ -1,10 +1,10 @@
 package parser
 
-import "../tokenizer"
 import "../ast"
-import "core:path/filepath"
+import "../tokenizer"
 import "core:fmt"
 import "core:os"
+import "core:path/filepath"
 import "core:slice"
 import "core:strings"
 
@@ -16,7 +16,7 @@ collect_package :: proc(path: string) -> (pkg: ^ast.Package, success: bool) {
 		return
 	}
 
-	path_pattern := fmt.tprintf("%s/*.odin", pkg_path)
+	path_pattern := fmt.tprintf("%s/*.loki", pkg_path)
 	matches, err := filepath.glob(path_pattern)
 	defer delete(matches)
 
@@ -80,7 +80,13 @@ parse_package :: proc(pkg: ^ast.Package, p: ^Parser = nil) -> bool {
 		if pkg.name == "" {
 			pkg.name = file.pkg_decl.name
 		} else if pkg.name != file.pkg_decl.name {
-			error(p, file.pkg_decl.pos, "different package name, expected '%s', got '%s'", pkg.name, file.pkg_decl.name)
+			error(
+				p,
+				file.pkg_decl.pos,
+				"different package name, expected '%s', got '%s'",
+				pkg.name,
+				file.pkg_decl.name,
+			)
 		}
 	}
 

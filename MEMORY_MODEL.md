@@ -78,8 +78,8 @@ arr := [10]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
 ```loki
 // Любой объект можно разместить где угодно
-p := Person{...} in #malloc
-x := 42 in #arena(1*MB)
+p := Person{...} in $malloc
+x := 42 in $arena(1*MB)
 arr := [1000]int{...} in #jemalloc
 ```
 
@@ -129,7 +129,7 @@ simple :: pc (x: int) -> int {
 
 ## Типы аллокаторов
 
-### `#malloc` - системный аллокатор
+### `$malloc` - системный аллокатор
 
 ```loki
 p := Person{...} in #malloc
@@ -144,7 +144,7 @@ p := Person{...} in #malloc(1*KB)
 - Может быть медленным для множества маленьких аллокаций
 - Thread-safe (опционально)
 
-### `#arena` - arena аллокатор
+### `$arena` - arena аллокатор
 
 ```loki
 process :: pc () -> void in @heap {
@@ -162,7 +162,7 @@ main :: pc () -> void {
 - Идеально для временных данных
 - Не thread-safe (по умолчанию)
 
-### `#jemalloc` - jemalloc аллокатор
+### `$jemalloc` - jemalloc аллокатор
 
 ```loki
 p := Person{...} in #jemalloc
@@ -174,7 +174,7 @@ p := Person{...} in #jemalloc
 - Хорошая производительность для любых размеров
 - Thread-safe
 
-### `#stack` - явное размещение на стеке
+### `$stack` - явное размещение на стеке
 
 ```loki
 with_contract :: pc () -> void in @heap {
@@ -234,11 +234,11 @@ create :: pc () -> []int in @heap {
 
 main :: pc () -> void {
     // ❌ COMPILE ERROR: нельзя возвращать из temporary allocator
-    result := create() in #arena(10*MB)^
+    result := create() in $arena(10*MB)^
     //                                 ^ ERROR: lifetime escape!
     
     // ✅ OK: без ^ данные живут в caller scope
-    result := create() in #arena(10*MB)
+    result := create() in $arena(10*MB)
     use(result)
 } // arena освобождается здесь
 ```
@@ -259,7 +259,7 @@ process :: pc () -> []int in @heap {
 
 main :: pc () -> void {
     // Вариант 1: без ^
-    result := process() in #arena(10*MB)
+    result := process() in $arena(10*MB)
     // Освобождено в process(): [2], [3]
     // Живет в arena: [1]
     use(result)
@@ -267,7 +267,7 @@ main :: pc () -> void {
 
 main2 :: pc () -> void {
     // Вариант 2: с ^
-    process() in #arena(10*MB)^
+    process() in $arena(10*MB)^
     // Освобождено все: [1], [2], [3]
 }
 ```
