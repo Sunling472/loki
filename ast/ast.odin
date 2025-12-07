@@ -143,12 +143,16 @@ Ellipsis :: struct {
 
 Proc_Lit :: struct {
 	using node: Expr,
-	type:          ^Proc_Type,
-	body:          ^Stmt, // nil when it represents a foreign procedure
-	tags:          Proc_Tags,
-	inlining:      Proc_Inlining,
-	where_token:   tokenizer.Token,
+	type: ^Proc_Type,
+	body: ^Stmt,
+	tags: Proc_Tags,
+	inlining: Proc_Inlining,
+	where_token: tokenizer.Token,
 	where_clauses: []^Expr,
+	
+	// Новое для Loki
+	allocator_contract: ^Allocator_Expr,  // in $heap или in $heap(10*Mb)
+	mutability: Proc_Mutability,          // для методов (#mut)
 }
 
 Comp_Lit :: struct {
@@ -243,11 +247,14 @@ Matrix_Index_Expr :: struct {
 Call_Expr :: struct {
 	using node: Expr,
 	inlining: Proc_Inlining,
-	expr:     ^Expr,
-	open:     tokenizer.Pos,
-	args:     []^Expr,
+	expr: ^Expr,
+	open: tokenizer.Pos,
+	args: []^Expr,
 	ellipsis: tokenizer.Token,
-	close:    tokenizer.Pos,
+	close: tokenizer.Pos,
+	
+	// Новое для Loki
+	allocator_usage: ^Allocator_Usage,  // in $arena(10*Mb)^
 }
 
 Field_Value :: struct {
@@ -896,7 +903,7 @@ Any_Node :: union {
 	^Implicit_Selector_Expr,
 	^Selector_Call_Expr,
 	^Index_Expr,
-	^Deref_Expr,
+	// ^Deref_Expr,  // УДАЛЕНО для Loki
 	^Slice_Expr,
 	^Matrix_Index_Expr,
 	^Call_Expr,
@@ -918,8 +925,8 @@ Any_Node :: union {
 	^Distinct_Type,
 	^Poly_Type,
 	^Proc_Type,
-	^Pointer_Type,
-	^Multi_Pointer_Type,
+	// ^Pointer_Type,        // УДАЛЕНО для Loki
+	// ^Multi_Pointer_Type,  // УДАЛЕНО для Loki
 	^Array_Type,
 	^Dynamic_Array_Type,
 	^Struct_Type,
@@ -927,7 +934,7 @@ Any_Node :: union {
 	^Enum_Type,
 	^Bit_Set_Type,
 	^Map_Type,
-	^Relative_Type,
+	// ^Relative_Type,       // УДАЛЕНО для Loki
 	^Matrix_Type,
 	^Bit_Field_Type,
 
@@ -961,6 +968,12 @@ Any_Node :: union {
 	^Field,
 	^Field_List,
 	^Bit_Field_Field,
+	
+	// Новое для Loki
+	^Allocator_Expr,
+	^Named_Allocator,
+	^Allocator_Usage,
+	^Method_Binding,
 }
 
 
@@ -982,7 +995,7 @@ Any_Expr :: union {
 	^Implicit_Selector_Expr,
 	^Selector_Call_Expr,
 	^Index_Expr,
-	^Deref_Expr,
+	// ^Deref_Expr,  // УДАЛЕНО для Loki
 	^Slice_Expr,
 	^Matrix_Index_Expr,
 	^Call_Expr,
@@ -1004,8 +1017,8 @@ Any_Expr :: union {
 	^Distinct_Type,
 	^Poly_Type,
 	^Proc_Type,
-	^Pointer_Type,
-	^Multi_Pointer_Type,
+	// ^Pointer_Type,        // УДАЛЕНО для Loki
+	// ^Multi_Pointer_Type,  // УДАЛЕНО для Loki
 	^Array_Type,
 	^Dynamic_Array_Type,
 	^Struct_Type,
@@ -1013,11 +1026,59 @@ Any_Expr :: union {
 	^Enum_Type,
 	^Bit_Set_Type,
 	^Map_Type,
-	^Relative_Type,
+	// ^Relative_Type,       // УДАЛЕНО для Loki
 	^Matrix_Type,
 	^Bit_Field_Type,
+	
+	// Новое для Loki
+	^Allocator_Expr,
 }
 
+
+// ============================================
+// Loki-специфичные узлы
+// ============================================
+
+// Аллокатор: $arena(.Dynamic, 10*Mb, mutex=true)
+Allocator_Expr :: struct {
+	using node: Expr,
+	dollar: tokenizer.Pos,      // позиция $
+	name: ^Ident,               // arena, malloc, jemalloc, heap
+	kind: ^Expr,                // .Dynamic, .Static (опционально)
+	size: ^Expr,                // 10*Mb (опционально)
+	flags: []^Field_Value,      // mutex=true (опционально)
+}
+
+// Именованный аллокатор: $tmp :: $arena(.Dynamic, 10*Mb)
+Named_Allocator :: struct {
+	using node: Decl,
+	docs: ^Comment_Group,
+	name: ^Ident,               // tmp
+	allocator: ^Allocator_Expr, // $arena(.Dynamic, 10*Mb)
+	comment: ^Comment_Group,
+}
+
+// Использование аллокатора: in $tmp^ или in $arena(...)
+Allocator_Usage :: struct {
+	using node: Node,
+	in_pos: tokenizer.Pos,      // позиция 'in'
+	allocator: ^Expr,           // $tmp или $arena(...)
+	transfer_ownership: bool,   // если есть ^
+}
+
+// Мутабельность процедуры (для методов)
+Proc_Mutability :: enum u8 {
+	Immutable,
+	Mutable,  // #mut
+}
+
+// Method binding: p: Person => Interface => { methods }
+Method_Binding :: struct {
+	using node: Stmt,
+	receiver: ^Expr,            // p: Person
+	interfaces: []^Expr,        // => Interface1 => Interface2
+	methods: []^Proc_Lit,       // { init :: pc () {} }
+}
 
 Any_Stmt :: union {
 	^Bad_Stmt,
@@ -1045,4 +1106,8 @@ Any_Stmt :: union {
 	^Import_Decl,
 	^Foreign_Block_Decl,
 	^Foreign_Import_Decl,
+	
+	// Новое для Loki
+	^Named_Allocator,
+	^Method_Binding,
 }

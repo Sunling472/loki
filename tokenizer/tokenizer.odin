@@ -1,6 +1,7 @@
 // The tokenizer (lexer) for `Odin` files, used to create tooling.
 package tokenizer
 
+import "core:log"
 import "core:fmt"
 import "core:unicode"
 import "core:unicode/utf8"
@@ -503,7 +504,6 @@ scan :: proc(t: ^Tokenizer) -> Token {
 		lit = scan_identifier(t)
 		kind = .Ident
 		check_keyword: if len(lit) > 1 {
-			// TODO(bill): Maybe have a hash table lookup rather than this linear search
 			for i in Token_Kind.B_Keyword_Begin ..= Token_Kind.B_Keyword_End {
 				if lit == tokens[i] {
 					kind = Token_Kind(i)
@@ -574,7 +574,7 @@ scan :: proc(t: ^Tokenizer) -> Token {
 		case '@': kind = .At
 		case '$': kind = .Dollar
 		case '?': kind = .Question
-		case '^': kind = .Pointer
+		case '^': kind = .Caret  // ИЗМЕНЕНО: было Pointer
 		case ';': kind = .Semicolon
 		case ',': kind = .Comma
 		case ':': kind = .Colon
@@ -606,9 +606,13 @@ scan :: proc(t: ^Tokenizer) -> Token {
 			}
 		case '=':
 			kind = .Eq
-			if t.ch == '=' {
+			switch t.ch {
+			case '=':
 				advance_rune(t)
 				kind = .Cmp_Eq
+			case '>':  // НОВОЕ: => для method binding
+				advance_rune(t)
+				kind = .Fat_Arrow
 			}
 		case '~':
 			kind = .Xor
@@ -649,6 +653,37 @@ scan :: proc(t: ^Tokenizer) -> Token {
 				advance_rune(t)
 				kind = .Sub_Eq
 			}
+		case '<':
+			kind = .Lt
+			switch t.ch {
+			case '=':
+				advance_rune(t)
+				kind = .Lt_Eq
+			case '<':
+				advance_rune(t)
+				kind = .Shl
+				if t.ch == '=' {
+					advance_rune(t)
+					kind = .Shl_Eq
+				}
+			case '-':  // НОВОЕ: <- для return
+				advance_rune(t)
+				kind = .Left_Arrow
+			}
+		case '>':
+			kind = .Gt
+			switch t.ch {
+			case '=':
+				advance_rune(t)
+				kind = .Gt_Eq
+			case '>':
+				advance_rune(t)
+				kind = .Shr
+				if t.ch == '=' {
+					advance_rune(t)
+					kind = .Shr_Eq
+				}
+			}
 		case '#':
 			kind = .Hash
 			if t.ch == '!' {
@@ -667,34 +702,6 @@ scan :: proc(t: ^Tokenizer) -> Token {
 			case '=':
 				advance_rune(t)
 				kind = .Quo_Eq
-			}
-		case '<':
-			kind = .Lt
-			switch t.ch {
-			case '=':
-				advance_rune(t)
-				kind = .Lt_Eq
-			case '<':
-				advance_rune(t)
-				kind = .Shl
-				if t.ch == '=' {
-					advance_rune(t)
-					kind = .Shl_Eq
-				}
-			}
-		case '>':
-			kind = .Gt
-			switch t.ch {
-			case '=':
-				advance_rune(t)
-				kind = .Gt_Eq
-			case '>':
-				advance_rune(t)
-				kind = .Shr
-				if t.ch == '=' {
-					advance_rune(t)
-					kind = .Shr_Eq
-				}
 			}
 		case '&':
 			kind = .And
@@ -745,7 +752,7 @@ scan :: proc(t: ^Tokenizer) -> Token {
 			// Preserve insert_semicolon info
 		case .Ident, .Context, .Typeid, .Break, .Continue, .Fallthrough, .Return,
 		     .Integer, .Float, .Imag, .Rune, .String, .Undef,
-		     .Question, .Pointer, .Close_Paren, .Close_Bracket, .Close_Brace,
+		     .Question, .Caret, .Close_Paren, .Close_Bracket, .Close_Brace,  // ИЗМЕНЕНО: Pointer -> Caret
 		     .Increment, .Decrement, .Or_Return, .Or_Break, .Or_Continue:
 			/*fallthrough*/
 			t.insert_semicolon = true

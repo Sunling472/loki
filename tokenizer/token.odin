@@ -49,7 +49,7 @@ Token_Kind :: enum u32 {
 		Hash,     // #
 		At,       // @
 		Dollar,   // $
-		Pointer,  // ^
+		Caret,    // ^ (было Pointer) - теперь для ownership transfer
 		Question, // ?
 		Add,      // +
 		Sub,      // -
@@ -61,7 +61,7 @@ Token_Kind :: enum u32 {
 		Or,       // |
 		Xor,      // ~
 		And_Not,  // &~
-		Shl,      // <<
+		Shl,      // 
 		Shr,      // >>
 
 		Cmp_And,  // &&
@@ -88,11 +88,12 @@ Token_Kind :: enum u32 {
 		Decrement,          // --
 		Arrow_Right,        // ->
 		Undef,              // ---
+		Left_Arrow,         // <- (новое для Loki)
 
 	B_Comparison_Begin,
 		Cmp_Eq, // ==
 		Not_Eq, // !=
-		Lt,     // <
+		Lt,     // 
 		Gt,     // >
 		Lt_Eq,  // <=
 		Gt_Eq,  // >=
@@ -109,8 +110,9 @@ Token_Kind :: enum u32 {
 		Period,        // .
 		Comma,         // ,
 		Ellipsis,      // ..
-		Range_Half,    // ..<
+		Range_Half,    // ..
 		Range_Full,    // ..=
+		Fat_Arrow,     // => (новое для Loki)
 	B_Operator_End,
 
 	B_Keyword_Begin,
@@ -133,7 +135,7 @@ Token_Kind :: enum u32 {
 		Fallthrough, // fallthrough
 		Defer,       // defer
 		Return,      // return
-		Proc,        // proc
+		Pc,          // pc (новое для Loki, вместо Proc)
 		Struct,      // struct
 		Union,       // union
 		Enum,        // enum
@@ -184,7 +186,7 @@ tokens := [Token_Kind.COUNT]string {
 	"#",
 	"@",
 	"$",
-	"^",
+	"^",  // Caret (было Pointer)
 	"?",
 	"+",
 	"-",
@@ -223,6 +225,7 @@ tokens := [Token_Kind.COUNT]string {
 	"--",
 	"->",
 	"---",
+	"<-",  // новое для Loki
 
 	"",
 	"==",
@@ -246,6 +249,7 @@ tokens := [Token_Kind.COUNT]string {
 	"..",
 	"..<",
 	"..=",
+	"=>",  // новое для Loki
 	"",
 
 	"",
@@ -268,7 +272,7 @@ tokens := [Token_Kind.COUNT]string {
 	"fallthrough",
 	"defer",
 	"return",
-	"proc",
+	"pc",        // новое для Loki (было "proc")
 	"struct",
 	"union",
 	"enum",

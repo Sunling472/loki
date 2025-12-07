@@ -62,6 +62,10 @@ walk :: proc(v: ^Visitor, node: ^Node) {
 	}
 
 	switch n in node.derived {
+	case ^Allocator_Expr:
+	case ^Named_Allocator:
+	case ^Allocator_Usage:
+	case ^Method_Binding:
 	case ^File:
 		if n.docs != nil {
 			walk(v, n.docs)
@@ -117,8 +121,6 @@ walk :: proc(v: ^Visitor, node: ^Node) {
 		walk(v, n.expr)
 		walk(v, n.row_index)
 		walk(v, n.column_index)
-	case ^Deref_Expr:
-		walk(v, n.expr)
 	case ^Slice_Expr:
 		walk(v, n.expr)
 		if n.low != nil {
@@ -360,10 +362,6 @@ walk :: proc(v: ^Visitor, node: ^Node) {
 	case ^Proc_Type:
 		walk(v, n.params)
 		walk(v, n.results)
-	case ^Pointer_Type:
-		walk(v, n.elem)
-	case ^Multi_Pointer_Type:
-		walk(v, n.elem)
 	case ^Array_Type:
 		if n.tag != nil {
 			walk(v, n.tag)
@@ -408,9 +406,6 @@ walk :: proc(v: ^Visitor, node: ^Node) {
 	case ^Map_Type:
 		walk(v, n.key)
 		walk(v, n.value)
-	case ^Relative_Type:
-		walk(v, n.tag)
-		walk(v, n.type)
 	case ^Matrix_Type:
 		walk(v, n.row_count)
 		walk(v, n.column_count)

@@ -132,6 +132,9 @@ clone_node :: proc(node: ^Node) -> ^Node {
 		case ^Proc_Lit:
 			r.type = auto_cast clone(r.type)
 			r.body = clone(r.body)
+			// НОВОЕ для Loki: клонируем контракт и mutability
+			r.allocator_contract = auto_cast clone(r.allocator_contract)
+			// mutability - это enum, копируется автоматически
 		case ^Comp_Lit:
 			r.type  = clone(r.type)
 			r.elems = clone(r.elems)
@@ -160,8 +163,9 @@ clone_node :: proc(node: ^Node) -> ^Node {
 			r.expr         = clone(r.expr)
 			r.row_index    = clone(r.row_index)
 			r.column_index = clone(r.column_index)
-		case ^Deref_Expr:
-			r.expr = clone(r.expr)
+		// УДАЛЕНО для Loki: Deref_Expr
+		// case ^Deref_Expr:
+		// 	r.expr = clone(r.expr)
 		case ^Slice_Expr:
 			r.expr = clone(r.expr)
 			r.low  = clone(r.low)
@@ -169,6 +173,8 @@ clone_node :: proc(node: ^Node) -> ^Node {
 		case ^Call_Expr:
 			r.expr = clone(r.expr)
 			r.args = clone(r.args)
+			// НОВОЕ для Loki: клонируем allocator_usage
+			r.allocator_usage = auto_cast clone(r.allocator_usage)
 		case ^Field_Value:
 			r.field = clone(r.field)
 			r.value = clone(r.value)
@@ -304,11 +310,12 @@ clone_node :: proc(node: ^Node) -> ^Node {
 		case ^Proc_Type:
 			r.params  = auto_cast clone(r.params)
 			r.results = auto_cast clone(r.results)
-		case ^Pointer_Type:
-			r.elem = clone(r.elem)
-			r.tag  = clone(r.tag)
-		case ^Multi_Pointer_Type:
-			r.elem = clone(r.elem)
+		// УДАЛЕНО для Loki: Pointer_Type, Multi_Pointer_Type
+		// case ^Pointer_Type:
+		// 	r.elem = clone(r.elem)
+		// 	r.tag  = clone(r.tag)
+		// case ^Multi_Pointer_Type:
+		// 	r.elem = clone(r.elem)
 		case ^Array_Type:
 			r.len  = clone(r.len)
 			r.elem = clone(r.elem)
@@ -337,9 +344,10 @@ clone_node :: proc(node: ^Node) -> ^Node {
 			r.row_count = clone(r.row_count)
 			r.column_count = clone(r.column_count)
 			r.elem = clone(r.elem)
-		case ^Relative_Type:
-			r.tag = clone(r.tag)
-			r.type = clone(r.type)
+		// УДАЛЕНО для Loki: Relative_Type
+		// case ^Relative_Type:
+		// 	r.tag = clone(r.tag)
+		// 	r.type = clone(r.type)
 		case ^Bit_Field_Type:
 			r.backing_type = clone(r.backing_type)
 			r.fields       = auto_cast clone(r.fields)
@@ -347,6 +355,31 @@ clone_node :: proc(node: ^Node) -> ^Node {
 			r.name     = clone(r.name)
 			r.type     = clone(r.type)
 			r.bit_size = clone(r.bit_size)
+		
+		// ============================================
+		// НОВОЕ для Loki
+		// ============================================
+		
+		case ^Allocator_Expr:
+			r.name = auto_cast clone(r.name)
+			r.kind = clone(r.kind)
+			r.size = clone(r.size)
+			r.flags = clone(r.flags)
+		
+		case ^Named_Allocator:
+			r.name = auto_cast clone(r.name)
+			r.allocator = auto_cast clone(r.allocator)
+			// docs и comment клонируются автоматически через mem.copy
+		
+		case ^Allocator_Usage:
+			r.allocator = clone(r.allocator)
+			// transfer_ownership - это bool, копируется автоматически
+		
+		case ^Method_Binding:
+			r.receiver = clone(r.receiver)
+			r.interfaces = clone(r.interfaces)
+			r.methods = clone(r.methods)
+		
 		case:
 			fmt.panicf("Unhandled node kind: %v", r)
 		}
